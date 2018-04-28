@@ -1,5 +1,25 @@
 import numpy as np
+#import smbus
 import cv2
+import struct
+
+#bus = smbus.SMBus(1)
+addr = 0x43
+
+BALL_DATA=0
+
+def serializeMsg(msg):
+    return [b for num in msg for b in struct.pack('>h', num)]
+
+def sendBallData(size, offset):
+    try:
+        msg = serializeMsg([size, offset])
+        #bus.write_block_data(addr, BALL_DATA, msg ) 
+    except IOError:
+        print ("can't communicate with arduino")
+
+
+############################MAIN##################################
 
 cap = cv2.VideoCapture(1)
 
@@ -8,7 +28,7 @@ upper_ball = np.array([50,255,255])
 
 kernel = np.ones((5,5), np.uint8)
 
-SCREEN_CENTER = [int(i/2) for i in self.cap.read()[1].shape[:2]][::-1]
+SCREEN_CENTER = [int(i/2) for i in cap.read()[1].shape[:2]][::-1]
 
 while (True):
     try:
@@ -24,13 +44,17 @@ while (True):
         _, contours, _ = cv2.findContours(ball_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         if contours:
             max_contour = contours[np.argmax(np.array([cv2.contourArea(cnt) for cnt in contours]), axis=0)]
+            #process max contour
             M = cv2.moments(max_contour)
             if (M['m00']) != 0:
                 cx, cy = int(M['m10']/M['m00']), int(M['m01']/M['m00'])
                 center = (cx, cy)
                 cv2.circle(frame, center, 5, [0,0,255], -1)
-
-
+                area = int(cv2.contourArea(max_contour))
+                offset = center[1] - SCREEN_CENTER[1]
+                print (offset)
+                #send data to arduino
+                sendBallData(area, offset)
         cv2.imshow('frame',frame)
         cv2.imshow('mask', ball_mask)
 
@@ -38,5 +62,6 @@ while (True):
             break
 
 
-    except:
+    except Exception(e):
+        print(e)
         pass
