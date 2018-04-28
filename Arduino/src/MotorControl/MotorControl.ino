@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #include <Wire.h>
 
 const int addr = 0x43;
@@ -8,11 +9,38 @@ void setup() {
     Wire.begin(addr);
     Wire.onReceive(receiveData);
     Wire.onRequest(nothing);
+=======
+//define IO pin
+#define ENB 6
+#define IN3 9
+#define IN4 11
+
+const int NUM_WHEELS = 4;
+const int WHEEL_PINS = {};
+
+
+void setup() {
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+  pinMode(ENB, OUTPUT);
+  digitalWrite(ENB, HIGH);  
+>>>>>>> f45a7e79d9a3b4f69dfae81735e9a5389040a048
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-
+  //digitalWrite(IN3, LOW);
+  //digitalWrite(IN4, HIGH);
+  //delay(500);
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+  //delay(500);
+  //digitalWrite(IN3, HIGH);
+  //digitalWrite(IN4, LOW);
+  //delay(500);
+  //digitalWrite(IN3, HIGH);
+  //digitalWrite(IN4, LOW);
+  //delay(500);
+  
 }
 
 void receiveData(int num_bytes) {
