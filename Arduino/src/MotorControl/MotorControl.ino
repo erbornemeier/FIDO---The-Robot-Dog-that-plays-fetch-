@@ -33,8 +33,9 @@ volatile int ball_offset;
 
 }
 void loop() {
-    setMotor(LEFT, 128);
-    setMotor(RIGHT, -128);  
+    setMotor(LEFT, -100);
+    
+    setMotor(RIGHT, -100);  
 }
 
 /*
@@ -79,13 +80,14 @@ void setMotor(int WHEEL_SIDE, int speed){
             if (speed < 0) {
                 analogWrite(ENA, -speed);
                 digitalWrite(IN1,LOW);    //left wheels backup  
-                digitalWrite(IN2,HIGH);    
+                digitalWrite(IN2,HIGH);  
             }
             else {
                 analogWrite(ENA, speed);
                 digitalWrite(IN1,HIGH);      
                 digitalWrite(IN2,LOW);
             }
+            break;
         case RIGHT:
             if (speed < 0) {
                 analogWrite(ENB, -speed);
@@ -97,6 +99,7 @@ void setMotor(int WHEEL_SIDE, int speed){
                 digitalWrite(IN3,LOW);      
                 digitalWrite(IN4,HIGH);
             }
+            break;
              
     }
    
