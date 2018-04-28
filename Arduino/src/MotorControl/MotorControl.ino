@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #include <Wire.h>
 
 const int addr = 0x43;
@@ -24,7 +23,6 @@ void setup() {
   pinMode(IN4, OUTPUT);
   pinMode(ENB, OUTPUT);
   digitalWrite(ENB, HIGH);  
->>>>>>> f45a7e79d9a3b4f69dfae81735e9a5389040a048
 }
 
 void loop() {
