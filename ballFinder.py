@@ -2,25 +2,32 @@ import sys
 import traceback
 import numpy as np
 import time as t
-import smbus
+#import smbus
 import cv2
 import struct
 
-bus = smbus.SMBus(1)
+#bus = smbus.SMBus(1)
 addr = 0x43
 
 BALL_DATA=0
+PICKUP=1
 
 def serializeMsg(msg):
     return [b for num in msg for b in struct.pack('>h', num)]
 
-def sendBallData(size, offset):
+def sendBallData(size, offsetX, offsetY):
     try:
-        msg = serializeMsg([size, offset])
-        bus.write_block_data(addr, BALL_DATA, msg ) 
+        msg = serializeMsg([size, offsetX, offsetY])
+        #bus.write_block_data(addr, BALL_DATA, msg ) 
     except IOError:
         print ("can't communicate with arduino")
 
+def sendPickup():
+    try:
+        msg = serializeMsg([0])
+        #bus.write_block_data(addr, PICKUP, msg ) 
+    except IOError:
+        print ("can't communicate with arduino")
 
 ############################MAIN##################################
 
@@ -36,7 +43,7 @@ while True:
         t.sleep(.1)
 
 '''
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
 lower_ball = np.array([25,50,150])
 upper_ball = np.array([50,255,255])
@@ -66,13 +73,16 @@ while (True):
                 center = (cx, cy)
                 cv2.circle(frame, center, 5, [0,0,255], -1)
                 area = int(cv2.contourArea(max_contour))
-                offset = center[1] - SCREEN_CENTER[1]
-                print (area)
-                #send data to arduino
+                offset = (center[0] - SCREEN_CENTER[0], center[1] - SCREEN_CENTER[1])
+                #we can see the ball
                 if area > 100:
-                    sendBallData(int(area/1000.0), offset)
-        #cv2.imshow('frame',frame)
-        #cv2.imshow('mask', ball_mask)
+                    #ball needs to be picked up
+                    if offset[0] < -200:
+                        sendPickup()
+                    else:
+                        sendBallData(int(area/1000.0), *offset)
+        cv2.imshow('frame',frame)
+        cv2.imshow('mask', ball_mask)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
