@@ -2,7 +2,7 @@
 
 const int addr = 0x43;
 
-enum RECEIVE_ACTIONS {BALL_DATA, PICKUP};
+enum RECEIVE_ACTIONS {BALL_DATA, PICKUP, START};
 enum WHEEL_SIDE {LEFT, RIGHT};  //controls both right motors and both left motors
 
 const unsigned int DEFAULT_SPEED = 100;
@@ -22,6 +22,7 @@ volatile int ball_size = 0;
 volatile int ball_offset = 0;
 
 volatile bool needs_pickup = false;
+volatile bool waiting = true;
 
 void setup() {
     Serial.begin(9600);
@@ -36,27 +37,32 @@ void setup() {
     pinMode(IN4,OUTPUT);
     pinMode(ENA,OUTPUT);
     pinMode(ENB,OUTPUT);
-    digitalWrite(ENA,HIGH);  
-    digitalWrite(ENB,HIGH);      
+
+    setMotor(LEFT, 0);
+    setMotor(RIGHT, 0);
 
 }
 void loop() {
-    /*setMotor(LEFT, -100);
-    setMotor(RIGHT, -100);
-    */
+    
+    if (!waiting){
+      
+          if (Serial.available() > 0){
+              int goTo = Serial.read();
+              Serial.println(goTo);
+              ball_offset = goTo;
+          }
+          goToBall();
+      
+          if (needs_pickup){
+              pickup_ball();
+              needs_pickup = false;
+              unsigned long start_time = millis();
+              while(millis() - start_time < 1000){} 
+              turnAround();
+          }
 
-    if (Serial.available() > 0){
-        int goTo = Serial.read();
-        Serial.println(goTo);
-        ball_offset = goTo;
     }
-    goToBall();
-
-    if (needs_pickup){
-        pickup_ball();
-        needs_pickup = false;
-        while(1){} //debug
-    }
+    
     
 }
 
@@ -71,6 +77,15 @@ void pickup_ball(){
       setMotor(LEFT, 0);
       setMotor(RIGHT, 0);
   
+}
+
+void turnAround(){
+      setMotor(LEFT, -DEFAULT_SPEED);
+      setMotor(RIGHT, DEFAULT_SPEED);
+      unsigned long start_time = millis();
+      while(millis() - start_time < 500){} 
+      setMotor(LEFT, 0);
+      setMotor(RIGHT, 0);
 }
 
 void goToBall(){
@@ -91,6 +106,7 @@ void goToBall(){
         
     }
 
+    
     setMotor(LEFT, DEFAULT_SPEED);
     setMotor(RIGHT, DEFAULT_SPEED);
   
@@ -143,8 +159,12 @@ void receiveData(int num_bytes) {
           ball_offset = i2cGetInt();
         }
         else if (cmd == PICKUP){
-            dumpData();
+            i2cGetInt();
             needs_pickup = true;  
+        }
+        else if (cmd == START){
+            i2cGetInt();
+            waiting = false;  
         }
         else {
             dumpData();

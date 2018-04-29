@@ -39,18 +39,6 @@ def sendStart():
 
 ############################MAIN##################################
 
-'''
-while True:
-    for i in range(-50,50):
-        sendBallData(0, i)
-        print(i)
-        t.sleep(.1)
-    for i in range(50,-50,-1):
-        sendBallData(0, i)
-        print(i)
-        t.sleep(.1)
-
-'''
 cap = cv2.VideoCapture(0)
 
 lower_ball = np.array([25,50,150])
