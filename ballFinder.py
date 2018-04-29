@@ -1,9 +1,12 @@
+import sys
+import traceback
 import numpy as np
-#import smbus
+import time as t
+import smbus
 import cv2
 import struct
 
-#bus = smbus.SMBus(1)
+bus = smbus.SMBus(1)
 addr = 0x43
 
 BALL_DATA=0
@@ -14,14 +17,26 @@ def serializeMsg(msg):
 def sendBallData(size, offset):
     try:
         msg = serializeMsg([size, offset])
-        #bus.write_block_data(addr, BALL_DATA, msg ) 
+        bus.write_block_data(addr, BALL_DATA, msg ) 
     except IOError:
         print ("can't communicate with arduino")
 
 
 ############################MAIN##################################
 
-cap = cv2.VideoCapture(1)
+'''
+while True:
+    for i in range(-50,50):
+        sendBallData(0, i)
+        print(i)
+        t.sleep(.1)
+    for i in range(50,-50,-1):
+        sendBallData(0, i)
+        print(i)
+        t.sleep(.1)
+
+'''
+cap = cv2.VideoCapture(0)
 
 lower_ball = np.array([25,50,150])
 upper_ball = np.array([50,255,255])
@@ -52,16 +67,18 @@ while (True):
                 cv2.circle(frame, center, 5, [0,0,255], -1)
                 area = int(cv2.contourArea(max_contour))
                 offset = center[1] - SCREEN_CENTER[1]
-                print (offset)
+                print (area)
                 #send data to arduino
-                sendBallData(area, offset)
-        cv2.imshow('frame',frame)
-        cv2.imshow('mask', ball_mask)
+                if area > 100:
+                    sendBallData(int(area/1000.0), offset)
+        #cv2.imshow('frame',frame)
+        #cv2.imshow('mask', ball_mask)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-
-    except Exception(e):
-        print(e)
+    except KeyboardInterrupt:
+        sys.exit(0)
+    except:
+        traceback.print_exc()
         pass
