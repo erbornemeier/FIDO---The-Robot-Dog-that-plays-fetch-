@@ -2,36 +2,44 @@ import sys
 import traceback
 import numpy as np
 import time as t
-#import smbus
+import smbus
 import cv2
 import struct
 
-#bus = smbus.SMBus(1)
+bus = smbus.SMBus(1)
 addr = 0x43
 
 BALL_DATA=0
 PICKUP=1
+START=2
 
 def serializeMsg(msg):
     return [b for num in msg for b in struct.pack('>h', num)]
 
-def sendBallData(size, offsetX, offsetY):
+def sendBallData(size, offsetY):
     try:
-        msg = serializeMsg([size, offsetX, offsetY])
-        #bus.write_block_data(addr, BALL_DATA, msg ) 
+        msg = serializeMsg([size, offsetY])
+        bus.write_block_data(addr, BALL_DATA, msg ) 
     except IOError:
         print ("can't communicate with arduino")
 
 def sendPickup():
     try:
         msg = serializeMsg([0])
-        #bus.write_block_data(addr, PICKUP, msg ) 
+        bus.write_block_data(addr, PICKUP, msg ) 
+    except IOError:
+        print ("can't communicate with arduino")
+
+def sendStart():
+    try:
+        msg = serializeMsg([0])
+        bus.write_block_data(addr, START, msg ) 
     except IOError:
         print ("can't communicate with arduino")
 
 ############################MAIN##################################
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 lower_ball = np.array([25,50,150])
 upper_ball = np.array([50,255,255])
@@ -39,6 +47,8 @@ upper_ball = np.array([50,255,255])
 kernel = np.ones((5,5), np.uint8)
 
 SCREEN_CENTER = [int(i/2) for i in cap.read()[1].shape[:2]][::-1]
+
+sendStart()
 
 while (True):
     try:
@@ -65,12 +75,14 @@ while (True):
                 #we can see the ball
                 if area > 100:
                     #ball needs to be picked up
-                    if offset[0] < -200:
+                    if offset[0] < -230:
                         sendPickup()
+                        print ("PICKUP")
                     else:
-                        sendBallData(int(area/1000.0), *offset)
-        cv2.imshow('frame',frame)
-        cv2.imshow('mask', ball_mask)
+                        sendBallData(int(area/1000.0), offset[1])
+                        print (offset)
+        #cv2.imshow('frame',frame)
+        #cv2.imshow('mask', ball_mask)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
