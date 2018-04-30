@@ -2,14 +2,12 @@
 
 const int addr = 0x43;
 
-enum RECEIVE_ACTIONS {BALL_DATA, PICKUP, START};
+enum RECEIVE_ACTIONS {BALL_DATA};
 enum WHEEL_SIDE {LEFT, RIGHT};  //controls both right motors and both left motors
 
-const unsigned int DEFAULT_SPEED = 100;
-const unsigned int ERROR_THRESHOLD = 2;
-const unsigned long PICKUP_TIME = 3000;
-const float K_P = 0.35;
-//const float K_P = 5.0; //debug
+const unsigned int DEFAULT_SPEED = 150;
+const unsigned int ERROR_THRESHOLD = 10;
+const float K_P = 0.25;
 
 int ENA=5; 
 int IN1=6;
@@ -21,12 +19,7 @@ int IN4=9;
 volatile int ball_size = 0;
 volatile int ball_offset = 0;
 
-volatile bool needs_pickup = false;
-volatile bool waiting = true;
-
 void setup() {
-    Serial.begin(9600);
-  
     Wire.begin(addr);
     Wire.onReceive(receiveData);
     Wire.onRequest(nothing);
@@ -37,90 +30,43 @@ void setup() {
     pinMode(IN4,OUTPUT);
     pinMode(ENA,OUTPUT);
     pinMode(ENB,OUTPUT);
-
-    setMotor(LEFT, 0);
-    setMotor(RIGHT, 0);
+    digitalWrite(ENA,HIGH);  
+    digitalWrite(ENB,HIGH);      
 
 }
 void loop() {
-    
-    if (!waiting){
-      
-          if (Serial.available() > 0){
-              int goTo = Serial.read();
-              Serial.println(goTo);
-              ball_offset = goTo;
-          }
-          goToBall();
-      
-          if (needs_pickup){
-              pickup_ball();
-              needs_pickup = false;
-              unsigned long start_time = millis();
-              while(millis() - start_time < 1000){} 
-              turnAround();
-          }
-
-    }
-    
-    
+    /*setMotor(LEFT, -100);
+    setMotor(RIGHT, -100);
+    */
+    goToBall();
 }
 
-void pickup_ball(){
-      unsigned long start_time = millis();
-
-      while (millis() - start_time < PICKUP_TIME){
-         setMotor(LEFT, DEFAULT_SPEED);
-         setMotor(RIGHT, DEFAULT_SPEED); 
-         delay(50);
-      }
-      setMotor(LEFT, 0);
-      setMotor(RIGHT, 0);
-  
-}
-
-void turnAround(){
-      setMotor(LEFT, -DEFAULT_SPEED);
-      setMotor(RIGHT, DEFAULT_SPEED);
-      unsigned long start_time = millis();
-      while(millis() - start_time < 500){} 
-      setMotor(LEFT, 0);
-      setMotor(RIGHT, 0);
-}
 
 void goToBall(){
     int error = ball_offset;
 
-    while(abs(error) > ERROR_THRESHOLD && !needs_pickup){
-        int leftMotorVal  = errorToMotorOut(LEFT,  error);
-        int rightMotorVal = errorToMotorOut(RIGHT, error);
+    do{
+        int leftMotorVal = errorToMotorOut(error);
+        int rightMotorVal = -errorToMotorOut(error);
         setMotor(LEFT,  leftMotorVal );
         setMotor(RIGHT, rightMotorVal);
-        Serial.print("LEFT: ");
-        Serial.print(leftMotorVal);
-        
-        Serial.print(" RIGHT: ");
-        Serial.println(rightMotorVal);
         delay(50);
-        error = ball_offset;  
+        error = ball_offset;
         
-    }
-
-    
-    setMotor(LEFT, DEFAULT_SPEED);
-    setMotor(RIGHT, DEFAULT_SPEED);
+    } while(abs(error) < ERROR_THRESHOLD);
+  
   
 }
 
-int errorToMotorOut(int WHEEL_SIDE, int error){
-    int val = ((K_P * error)*(WHEEL_SIDE==LEFT?1:-1)) + DEFAULT_SPEED;
+int errorToMotorOut(int error){
+    int val = (K_P * error) + DEFAULT_SPEED;
     if (abs(val) > 255) val = val>0?255:-255;
     return val;
 }
 
 void setMotor(int WHEEL_SIDE, int speed){
     switch (WHEEL_SIDE) {
-        case RIGHT:
+        case LEFT:
             if (speed < 0) {
                 analogWrite(ENA, -speed);
                 digitalWrite(IN1,LOW);    //left wheels backup  
@@ -132,7 +78,7 @@ void setMotor(int WHEEL_SIDE, int speed){
                 digitalWrite(IN2,LOW);
             }
             break;
-        case LEFT:
+        case RIGHT:
             if (speed < 0) {
                 analogWrite(ENB, -speed);
                 digitalWrite(IN3,HIGH);    //right wheels backup  
@@ -158,14 +104,6 @@ void receiveData(int num_bytes) {
           ball_size = i2cGetInt();
           ball_offset = i2cGetInt();
         }
-        else if (cmd == PICKUP){
-            i2cGetInt();
-            needs_pickup = true;  
-        }
-        else if (cmd == START){
-            i2cGetInt();
-            waiting = false;  
-        }
         else {
             dumpData();
         }
@@ -180,7 +118,8 @@ void receiveData(int num_bytes) {
 
 void nothing(){}
 
-// Reads the next 2 bytes from the i2c bus and splices them together to make a signed 16-bit integer.
+// Reads the next 2 bytes from the i2c bus and splices them together to make a
+// signed 16-bit integer.
 int i2cGetInt() {
     return ((Wire.read() << 8) | Wire.read());
 }
